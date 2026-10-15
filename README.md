@@ -21,3 +21,5 @@ TODO:
 12. vytvorit jendoduchy backend pro stranku galerie pro pridani, mazani a editaci fotek a pridavani autoru + jejich kratkeho popisu
 
 13. vytvorit stranku kontakty, vyhledat free to use fotku pro kontaktujte nas, zrpovoznit kontaktujte nas, hazi to na backend nebo email
+
+14. pokud bude cas, udelat navrh na eshop pricemz by byl jednoduchy neco jako yunglean merch stranka
