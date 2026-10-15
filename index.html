@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="cs" class="intro-pending">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <title>FOPA</title>
+
+    <!-- ===================================================================
+         1. FONTY A PŘEDNAČTENÍ ZÁKLADNÍHO LOGA + FOTEK PRO "PRÁVĚ PROBÍHÁ"
+         =================================================================== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=block" rel="stylesheet">
+
+    <link rel="preload" as="image" href="images_logo/logo.png">
+    <!-- Prioritní preload fotek pro sekci "Právě probíhá", aby po F5 nebyly zpožděné -->
+    <link rel="preload" as="image" href="images_bg/nanashi.webp" fetchpriority="high">
+    <link rel="preload" as="image" href="images_bg/listening.webp" fetchpriority="high">
+    <link rel="preload" as="image" href="images_bg/presentation.webp" fetchpriority="high">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- ===================================================================
+         2. VLASTNÍ STYLY A DEFINICE ANIMACÍ
+         =================================================================== -->
+    <style>
+        /* --- 2.1 Základní nastavení dokumentu (vč. iOS Safari fixu) --- */
+        html, body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            color: #000000;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            overflow-x: hidden;
+            cursor: default;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            font-synthesis: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body.menu-open {
+            overflow: hidden !important;
+            touch-action: none;
+        }
+
+        a, button, .cursor-pointer, .schedule-item {
+            cursor: pointer !important;
+        }
+
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* --- 2.2 Běžící informační pás (Marquee) --- */
+        .marquee-container {
+            width: 100%;
+            background-color: #000000;
+            color: #ffffff;
+            overflow: hidden;
+            display: flex;
+            white-space: nowrap;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+        
+        .marquee-track {
+            display: inline-flex;
+            white-space: nowrap;
+            will-change: transform;
+            animation: marquee 40s linear infinite;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+        }
+
+        @keyframes marquee {
+            0%   { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+        }
+
+        .marquee-text-item {
+            padding-right: 3rem;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        @media (hover: hover) {
+            .marquee-container:hover {
+                background-color: #ffffff;
+                color: #000000;
+            }
+            .marquee-container:hover .marquee-track {
+                animation-play-state: paused;
+            }
+        }
+
+        /* --- 2.3 Vstupní a scrollovací animace --- */
+        @keyframes fadeIn {
+            0%   { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        .animate-fade-in {
+            opacity: 0;
+            animation: fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeUpNav {
+            0%   { opacity: 0; transform: translate3d(0, 40px, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        .animate-fade-up-nav {
+            opacity: 0;
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+            animation: fadeUpNav 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes wordReveal {
+            0%   { opacity: 0; transform: translate3d(0, 10px, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        
+        .scroll-trigger .word-span { 
+            opacity: 0; 
+            display: inline-block; 
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+        .scroll-trigger.is-visible .word-span {
+            animation-name: wordReveal;
+            animation-duration: 0.65s;
+            animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            animation-fill-mode: forwards;
+        }
+
+        .scroll-trigger .st-fade-in {
+            opacity: 0;
+            will-change: opacity, transform;
+            backface-visibility: hidden;
+        }
+        .scroll-trigger.is-visible .st-fade-in {
+            animation-name: wordReveal;
+            animation-duration: 0.7s;
+            animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            animation-fill-mode: forwards;
+        }
+
+        /* Časování animací (transition-delay: 0ms brání zpoždění hover efektů v Tailwindu) */
+        .delay-100 { animation-delay: 80ms !important;  transition-delay: 0ms !important; }
+        .delay-200 { animation-delay: 150ms !important; transition-delay: 0ms !important; }
+        .delay-300 { animation-delay: 220ms !important; transition-delay: 0ms !important; }
+        .delay-400 { animation-delay: 290ms !important; transition-delay: 0ms !important; }
+        .delay-500 { animation-delay: 360ms !important; transition-delay: 0ms !important; }
+        .delay-800 { animation-delay: 600ms !important; transition-delay: 0ms !important; }
+
+        /* --- 2.4 Sekce "Právě probíhá" (Rozvrh a aktivní karta) --- */
+        .schedule-item {
+            background-color: transparent;
+            transform: translateZ(0);
+            transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                        color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .schedule-item .transition-colors {
+            transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                        border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                        background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .schedule-item .star-icon {
+            filter: brightness(0) invert(0);
+            transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Aktivní stav položky rozvrhu (černé pozadí, bílý text a hvězdička) */
+        .schedule-item.is-active {
+            background-color: #000000;
+        }
+        .schedule-item.is-active .title-text,
+        .schedule-item.is-active .time-text {
+            color: #ffffff !important;
+        }
+        .schedule-item.is-active .star-icon {
+            filter: brightness(0) invert(1) !important;
+        }
+        .schedule-item.is-active .tag-border {
+            border-color: #ffffff !important;
+            color: #ffffff !important;
+        }
+        .schedule-item.is-active .desc-text {
+            color: #999999 !important; 
+        }
+
+        @media (hover: hover) {
+            .schedule-item:not(.is-active):hover {
+                background-color: #f5f5f5;
+            }
+        }
+
+        /* --- 2.5 Desktopová navigace --- */
+        .nav-link {
+            display: inline-block;
+            position: relative;
+            text-align: right;
+            padding: 2px 0;
+            color: #000000;
+            transition: color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateZ(0);
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: #ea2eab;
+            transform: scaleX(0);
+            transform-origin: right;
+            will-change: transform;
+            backface-visibility: hidden;
+            transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @media (hover: hover) {
+            .nav-link:hover { 
+                color: #ea2eab; 
+            }
+            .nav-link:hover::after {
+                transform: scaleX(1);
+                transform-origin: left;
+            }
+        }
+
+        /* --- 2.6 Mobilní a tabletové fullscreen menu (Bílé pozadí, šetrné pro iOS) --- */
+        #mobile-menu-overlay {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            height: 100vh;
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            will-change: opacity;
+        }
+        #mobile-menu-overlay.is-open {
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .mobile-nav-link {
+            display: inline-flex;
+            align-items: flex-start;
+            position: relative;
+            color: #000000;
+            transition: color 0.2s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Šedivá čísla v závorkách: (1), (2)... */
+        .mobile-nav-link .mobile-nav-num {
+            color: #8c8c8c;
+            font-weight: 400;
+            line-height: 1;
+            margin-left: 0.4rem;
+            transform: translateY(-0.12em);
+            transition: color 0.2s ease;
+        }
+
+        @media (hover: hover) {
+            .mobile-nav-link:hover {
+                color: #ea2eab;
+                transform: translate3d(6px, 0, 0);
+            }
+        }
+
+        /* --- 2.7 Akční odkazy ("Více o festivalu", "Všechny akce") --- */
+        .action-link {
+            color: #000000;
+            transition: color 0.25s cubic-bezier(0.16, 1, 0.3, 1) 0ms !important;
+        }
+        
+        .action-link .text-wrap {
+            position: relative;
+            padding-bottom: 2px;
+            display: inline-block;
+            transition: color 0.25s cubic-bezier(0.16, 1, 0.3, 1) 0ms;
+        }
+        
+        .action-link .text-wrap::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #000000;
+        }
+        
+        .action-link .text-wrap::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #ea2eab;
+            transform: scaleX(0);
+            transform-origin: right;
+            will-change: transform;
+            backface-visibility: hidden;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) 0ms;
+        }
+
+        .action-link .plus-icon {
+            display: inline-block;
+            transform: translate3d(0, -3px, 0) rotate(0deg);
+            will-change: transform, color;
+            backface-visibility: hidden;
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0ms,
+                        color 0.25s cubic-bezier(0.16, 1, 0.3, 1) 0ms;
+        }
+        
+        @media (hover: hover) {
+            .action-link:hover,
+            .action-link:hover .text-wrap,
+            .action-link:hover .plus-icon {
+                color: #ea2eab !important;
+            }
+            .action-link:hover .text-wrap::after {
+                transform: scaleX(1);
+                transform-origin: left;
+            }
+            .action-link:hover .plus-icon {
+                transform: translate3d(0, -3px, 0) rotate(45deg);
+            }
+        }
+
+        /* --- 2.8 Plovoucí šipka (pouze PC) a GPU vrstvy --- */
+        @keyframes arrowClick {
+            0%   { transform: translate3d(0, -4px, 0); }
+            50%  { transform: translate3d(0, 2px, 0); }
+            100% { transform: translate3d(0, -4px, 0); }
+        }
+        .animate-arrow-click {
+            animation: arrowClick 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        @media (min-width: 1024px) {
+            #left-media .bg-layer {
+                will-change: transform, opacity, clip-path;
+                backface-visibility: hidden;
+                transform: translateZ(0);
+            }
+        }
+
+        #dynamic-logo,
+        #mobile-logo {
+            will-change: filter;
+            transform: translateZ(0);
+            transition: filter 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* --- 2.9 Výchozí stav před spuštěním intro animace --- */
+        html.intro-pending .animate-fade-up-nav,
+        html.intro-pending .animate-fade-in {
+            animation-play-state: paused !important;
+            opacity: 0 !important;
+        }
+        @media (min-width: 1024px) {
+            html.intro-pending #left-media {
+                clip-path: inset(100% 0% 0% 0%);
+            }
+        }
+        @media (max-width: 1023px) {
+            html.intro-pending #mobile-hero-media {
+                opacity: 0;
+            }
+        }
+        html.intro-pending .intro-logo,
+        html.intro-pending #mobile-header {
+            opacity: 0;
+        }
+    </style>
+
+    <!-- Fallback při vypnutém JavaScriptu -->
+    <noscript>
+        <style>
+            html.intro-pending #left-media,
+            html.intro-pending #mobile-hero-media { clip-path: none !important; opacity: 1 !important; }
+            html.intro-pending .intro-logo,
+            html.intro-pending #mobile-header,
+            html.intro-pending .animate-fade-up-nav,
+            html.intro-pending .animate-fade-in { opacity: 1 !important; animation: none !important; }
+        </style>
+    </noscript>
+</head>
+<body class="w-full bg-white text-black overflow-x-hidden">
+
+    <!-- ===================================================================
+         3. MOBILNÍ A TABLETOVÉ FULLSCREEN MENU (Bílé pozadí, pod 1024px)
+         =================================================================== -->
+    <div id="mobile-menu-overlay" aria-hidden="true" class="fixed inset-0 bg-white text-black z-[100] flex flex-col justify-between lg:hidden select-none">
+        
+        <!-- Horní lišta: Čistý text "Close" vpravo nahoře (bez ohraničení a bez X) -->
+        <div class="w-full flex justify-end">
+            <button id="mobile-menu-close" type="button" aria-label="Zavřít menu" class="px-6 sm:px-8 py-5 sm:py-6 text-[17px] sm:text-[19px] font-normal tracking-tight text-black transition-colors duration-200 hover:text-[#ea2eab] active:opacity-60">
+                Close
+            </button>
+        </div>
+
+        <!-- Hlavní položky navigace se šedivými čísly v závorce (1) - (5) -->
+        <nav class="px-6 sm:px-12 my-auto flex flex-col items-start gap-2 sm:gap-3">
+            <div class="overflow-hidden py-0.5">
+                <a href="#o-festivalu" class="mobile-nav-item mobile-nav-link text-[44px] sm:text-[68px] md:text-[80px] font-medium leading-[0.94] tracking-[-0.03em] uppercase">
+                    <span>O FESTIVALU</span>
+                    <span class="mobile-nav-num text-[15px] sm:text-[20px] tracking-normal">(1)</span>
+                </a>
+            </div>
+            <div class="overflow-hidden py-0.5">
+                <a href="#vstupenky" class="mobile-nav-item mobile-nav-link text-[44px] sm:text-[68px] md:text-[80px] font-medium leading-[0.94] tracking-[-0.03em] uppercase">
+                    <span>VSTUPENKY</span>
+                    <span class="mobile-nav-num text-[15px] sm:text-[20px] tracking-normal">(2)</span>
+                </a>
+            </div>
+            <div class="overflow-hidden py-0.5">
+                <a href="#prave-probiha" class="mobile-nav-item mobile-nav-link text-[44px] sm:text-[68px] md:text-[80px] font-medium leading-[0.94] tracking-[-0.03em] uppercase">
+                    <span>HARMONOGRAM</span>
+                    <span class="mobile-nav-num text-[15px] sm:text-[20px] tracking-normal">(3)</span>
+                </a>
+            </div>
+            <div class="overflow-hidden py-0.5">
+                <a href="#galerie" class="mobile-nav-item mobile-nav-link text-[44px] sm:text-[68px] md:text-[80px] font-medium leading-[0.94] tracking-[-0.03em] uppercase">
+                    <span>GALERIE</span>
+                    <span class="mobile-nav-num text-[15px] sm:text-[20px] tracking-normal">(4)</span>
+                </a>
+            </div>
+            <div class="overflow-hidden py-0.5">
+                <a href="#footer-kontakt" class="mobile-nav-item mobile-nav-link text-[44px] sm:text-[68px] md:text-[80px] font-medium leading-[0.94] tracking-[-0.03em] uppercase">
+                    <span>KONTAKTY</span>
+                    <span class="mobile-nav-num text-[15px] sm:text-[20px] tracking-normal">(5)</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Spodní lišta menu: Vlevo malé černé logo FOPA -->
+        <div class="w-full flex justify-start items-end gap-4 px-6 sm:px-12 pb-6 sm:pb-10 pt-4">
+            <img id="mobile-menu-logo" src="images_logo/logo.png" alt="Logo FOPA" class="mobile-menu-bottom-el w-[64px] sm:w-[84px] h-auto object-contain select-none flex-shrink-0" style="filter: brightness(0);">
+        </div>
+    </div>
+
+    <!-- ===================================================================
+         4. LEVÝ PANEL – DESKTOP (Pevný vizuál + Marquee, od 1024px)
+         =================================================================== -->
+    <div class="hidden lg:flex fixed top-0 left-0 bottom-0 lg:w-[calc(100%-600px)] xl:w-[calc(100%-720px)] flex-col p-[20px] border-r-2 border-gray-200 bg-white z-10">
+        
+        <!-- Plátno pro vrstvení fotek a videí -->
+        <div id="left-media" class="relative flex-1 w-full bg-white overflow-hidden">
+            <!-- Výchozí plátno (dynamicky se mění při každém načtení stránky) -->
+            <img id="bg-default" src="images_bg/blue_bg.webp" alt="Background" decoding="async" class="bg-layer absolute inset-0 w-full h-full object-cover object-center opacity-100">
+            
+            <!-- Fotky pro sekci "Právě probíhá" (loading="eager" + fetchpriority="high" + decoding="sync" pro okamžité zobrazení po F5) -->
+            <img id="bg-nanashi" src="images_bg/nanashi.webp" alt="Nanashi Event" loading="eager" fetchpriority="high" decoding="sync" class="bg-layer absolute inset-0 w-full h-full object-cover object-center opacity-0">
+            <img id="bg-mysl" src="images_bg/listening.webp" alt="Mysl v rovnováze Event" loading="eager" fetchpriority="high" decoding="sync" class="bg-layer absolute inset-0 w-full h-full object-cover object-center opacity-0">
+            <img id="bg-prohlidka" src="images_bg/presentation.webp" alt="Komentovaná prohlídka výstavy" loading="eager" fetchpriority="high" decoding="sync" class="bg-layer absolute inset-0 w-full h-full object-cover object-center opacity-0">
+
+            <!-- Dynamicky barvené logo -->
+            <div class="intro-logo absolute top-4 left-4 w-32 z-30">
+                <img id="dynamic-logo" src="images_logo/logo.png" alt="Logo FOPA" class="w-full h-auto" style="filter: brightness(0) saturate(100%) invert(34%) sepia(48%) saturate(3501%) hue-rotate(297deg) brightness(97%) contrast(95%);">
+            </div>
+        </div>
+
+        <!-- Běžící informační pás (Desktop) -->
+        <div class="marquee-container py-4 flex-shrink-0 text-[24px] font-bold tracking-[-0.03em] leading-[98.1%] animate-fade-in">
+            <div class="marquee-track">
+                <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================
+         5. PRAVÝ PANEL / HLAVNÍ OBSAH STRÁNKY
+         =================================================================== -->
+    <div id="right-col" class="w-full lg:ml-auto relative lg:w-[600px] xl:w-[720px] min-h-[100dvh] bg-white z-0">
+        
+        <div class="px-[16px] sm:px-[28px] lg:px-[20px] pt-[14px] lg:pt-[20px] pb-[20px]">
+
+            <!-- -----------------------------------------------------------
+                 5.1 Mobilní a tabletová hlavička + Hero sekce (pod 1024px)
+                 ----------------------------------------------------------- -->
+            <div class="lg:hidden">
+                <header id="mobile-header" class="flex justify-between items-center pb-[12px]">
+                    <a href="#" class="block w-[76px] sm:w-[96px]">
+                        <img id="mobile-logo" src="images_logo/logo.png" alt="Logo FOPA" class="w-full h-auto" style="filter: brightness(0) saturate(100%) invert(34%) sepia(48%) saturate(3501%) hue-rotate(297deg) brightness(97%) contrast(95%);">
+                    </a>
+                    <button id="mobile-menu-open" type="button" aria-label="Otevřít menu" class="p-1.5 -mr-1.5 transition-transform duration-200 active:scale-90">
+                        <img src="icons/menu.svg" alt="Menu" class="w-[26px] h-[26px] sm:w-[32px] sm:h-[32px] object-contain">
+                    </button>
+                </header>
+
+                <!-- Hero vizuál (dynamicky se mění při každém načtení) + Marquee -->
+                <div class="w-full">
+                    <div id="mobile-hero-media" class="relative w-full aspect-[4/4.5] sm:aspect-[4/3.6] bg-white overflow-hidden">
+                        <img id="mobile-bg-default" src="images_bg/blue_bg.webp" alt="GAMPA Vizuál" class="mobile-bg-layer w-full h-full object-cover object-center">
+                    </div>
+                    <div class="marquee-container py-[10px] sm:py-[14px] text-[15px] sm:text-[20px] font-bold tracking-[-0.03em] leading-[98.1%] animate-fade-in">
+                        <div class="marquee-track">
+                            <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                            <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                            <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                            <span class="marquee-text-item">10/8/2026 &nbsp;&nbsp; GAMPA – Galerie města Pardubic &nbsp;&nbsp; Automatické mlýny, Pardubice I 1962, 530 03 Pardubice</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- -----------------------------------------------------------
+                 5.2 Desktopová navigace (od 1024px)
+                 ----------------------------------------------------------- -->
+            <div class="hidden lg:flex flex-col justify-start items-end">
+                <nav class="flex flex-col text-right gap-[25px] w-full">
+                    <div class="animate-fade-up-nav delay-100">
+                        <a href="#o-festivalu" class="nav-link lg:text-[54px] xl:text-[64px] font-medium leading-[0.949] tracking-[-0.03em]">O FESTIVALU</a>
+                    </div>
+                    <div class="animate-fade-up-nav delay-200">
+                        <a href="#vstupenky" class="nav-link lg:text-[54px] xl:text-[64px] font-medium leading-[0.949] tracking-[-0.03em]">VSTUPENKY</a>
+                    </div>
+                    <div class="animate-fade-up-nav delay-300">
+                        <a href="#prave-probiha" class="nav-link lg:text-[54px] xl:text-[64px] font-medium leading-[0.949] tracking-[-0.03em]">HARMONOGRAM</a>
+                    </div>
+                    <div class="animate-fade-up-nav delay-400">
+                        <a href="#galerie" class="nav-link lg:text-[54px] xl:text-[64px] font-medium leading-[0.949] tracking-[-0.03em]">GALERIE</a>
+                    </div>
+                    <div class="animate-fade-up-nav delay-500">
+                        <a href="#footer-kontakt" class="nav-link lg:text-[54px] xl:text-[64px] font-medium leading-[0.949] tracking-[-0.03em]">KONTAKTY</a>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- -----------------------------------------------------------
+                 5.3 Sekce Novinky & Workshopy
+                 ----------------------------------------------------------- -->
+            <div id="o-festivalu" class="mt-[64px] sm:mt-[90px] lg:mt-[470px] scroll-trigger space-y-10 sm:space-y-12">
+                <div>
+                    <p class="st-fade-in delay-100 text-[14px] sm:text-[18px] lg:text-[20px] font-normal text-gray-500 mb-[6px] lg:mb-[10px]">(NOVINKA)</p>
+                    <h2 class="animate-text-reveal text-[26px] sm:text-[34px] lg:text-[40px] font-semibold lg:font-medium text-[#000000] leading-[1.02] lg:leading-[0.949]">Dočasné ukončení volných<br>vstupů první neděli v měsíci</h2>
+                </div>
+                <div>
+                    <p class="st-fade-in delay-200 text-[14px] sm:text-[18px] lg:text-[20px] font-normal text-gray-500 mb-[6px] lg:mb-[10px]">(WORKSHOP)</p>
+                    <h2 class="animate-text-reveal text-[26px] sm:text-[34px] lg:text-[40px] font-semibold lg:font-medium text-[#000000] leading-[1.02] lg:leading-[0.949]">Přidání netradičního<br>workshopu experimentální<br>fotografie</h2>
+                </div>
+                
+                <div class="text-right !mt-[48px] sm:!mt-[70px] lg:!mt-[185px]">
+                    <a href="#" class="action-link st-fade-in delay-300 inline-flex items-center justify-end text-[16px] sm:text-[20px] lg:text-[24px] font-bold uppercase">
+                        <span class="text-wrap">VÍCE O FESTIVALU</span> 
+                        <span class="plus-icon text-[22px] sm:text-[26px] lg:text-[30px] font-bold ml-1.5 lg:ml-2 leading-none">+</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- -----------------------------------------------------------
+                 5.4 Sekce "Právě probíhá" (Program / Harmonogram)
+                 ----------------------------------------------------------- -->
+            <div id="prave-probiha" class="mt-[76px] sm:mt-[110px] lg:mt-[185px] scroll-trigger">
+                <p class="st-fade-in delay-100 text-[14px] sm:text-[18px] lg:text-[20px] font-normal text-[#999999] mb-[24px] sm:mb-[40px] lg:mb-[60px] uppercase">(PRÁVĚ PROBÍHÁ)</p>
+                
+                <!-- AKCE 1: Nanashi -->
+                <a href="#nanashi" data-bg="bg-nanashi" data-logo-color="#ea2eab" class="schedule-item block st-fade-in delay-200 mb-[28px] sm:mb-[36px] lg:mb-[20px] p-[16px] sm:p-[28px] lg:p-[40px] -mx-[16px] sm:-mx-[28px] lg:-mx-[40px] group">
+                    <!-- Mobilní & Tablet zobrazení -->
+                    <div class="lg:hidden flex flex-col">
+                        <div class="flex justify-between items-baseline mb-[8px] sm:mb-[12px]">
+                            <h3 class="title-text text-[28px] sm:text-[42px] font-bold leading-[0.98] tracking-tight text-black transition-colors">Nanashi</h3>
+                            <p class="desc-text text-[#999999] text-[12px] sm:text-[14px] leading-none transition-colors">Hana Kovaříková</p>
+                        </div>
+                        <div class="w-full aspect-[16/9] overflow-hidden bg-gray-100 mb-[10px] sm:mb-[14px]">
+                            <img src="images_bg/nanashi.webp" alt="Nanashi" loading="eager" fetchpriority="high" decoding="async" class="w-full h-full object-cover object-center">
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center pt-1">
+                                <span class="tag-border border-[1.5px] border-black rounded-[20px] px-[10px] sm:px-[12px] py-[2px] text-[11px] sm:text-[13px] font-bold uppercase tracking-wide leading-none transition-colors">HUDBA</span>
+                                <img src="icons/star.svg" alt="" class="star-icon w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] ml-[8px] object-contain select-none">
+                            </div>
+                            <div class="flex flex-col items-end text-right">
+                                <p class="time-text text-[26px] sm:text-[34px] font-normal leading-none text-black transition-colors">16:30</p>
+                                <p class="desc-text text-[13px] sm:text-[16px] text-[#999999] leading-none mt-[3px] transition-colors">17:20</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop zobrazení -->
+                    <div class="hidden lg:flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <div class="flex items-center mb-[11px]">
+                                <span class="tag-border border-[1.5px] border-black rounded-[20px] px-[12px] py-[2px] text-[13px] font-bold uppercase tracking-wide leading-none transition-colors">HUDBA</span>
+                                <img src="icons/star.svg" alt="" class="star-icon w-[18px] h-[18px] ml-[8px] object-contain select-none">
+                            </div>
+                            <h3 class="title-text lg:text-[58px] xl:text-[72px] font-bold leading-[0.95] tracking-tight text-black transition-colors">Nanashi</h3>
+                        </div>
+                        <div class="flex flex-col items-end text-right">
+                            <p class="desc-text text-[#999999] text-[14px] leading-none mb-[19px] transition-colors">Hana Kovaříková</p>
+                            <p class="time-text text-[38px] font-normal leading-none text-black transition-colors">16:30</p>
+                            <p class="desc-text text-[20px] text-[#999999] leading-none mt-[4px] transition-colors">17:20</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- AKCE 2: Mysl v rovnováze -->
+                <a href="#mysl-v-rovnovaze" data-bg="bg-mysl" data-logo-color="#000000" class="schedule-item block st-fade-in delay-300 mb-[28px] sm:mb-[36px] lg:mb-[20px] p-[16px] sm:p-[28px] lg:p-[40px] -mx-[16px] sm:-mx-[28px] lg:-mx-[40px] group">
+                    <!-- Mobilní & Tablet zobrazení -->
+                    <div class="lg:hidden flex flex-col">
+                        <div class="flex justify-between items-end mb-[8px] sm:mb-[12px]">
+                            <h3 class="title-text text-[28px] sm:text-[42px] font-bold leading-[0.96] tracking-tight text-black transition-colors">Mysl v<br>rovnováze</h3>
+                            <p class="desc-text text-[#999999] text-[12px] sm:text-[14px] leading-none transition-colors">Mgr. Jan Svoboda</p>
+                        </div>
+                        <div class="w-full aspect-[16/9] overflow-hidden bg-gray-100 mb-[10px] sm:mb-[14px]">
+                            <img src="images_bg/listening.webp" alt="Mysl v rovnováze" loading="eager" fetchpriority="high" decoding="async" class="w-full h-full object-cover object-center">
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center pt-1">
+                                <span class="tag-border border-[1.5px] border-black rounded-[20px] px-[10px] sm:px-[12px] py-[2px] text-[11px] sm:text-[13px] font-bold uppercase tracking-wide leading-none transition-colors">WORKSHOP</span>
+                                <img src="icons/star.svg" alt="" class="star-icon w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] ml-[8px] object-contain select-none">
+                            </div>
+                            <div class="flex flex-col items-end text-right">
+                                <p class="time-text text-[26px] sm:text-[34px] font-normal leading-none text-black transition-colors">16:30</p>
+                                <p class="desc-text text-[13px] sm:text-[16px] text-[#999999] leading-none mt-[3px] transition-colors">18:40</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop zobrazení -->
+                    <div class="hidden lg:flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <div class="flex items-center mb-[11px]">
+                                <span class="tag-border border-[1.5px] border-black rounded-[20px] px-[12px] py-[2px] text-[13px] font-bold uppercase tracking-wide leading-none transition-colors">WORKSHOP</span>
+                                <img src="icons/star.svg" alt="" class="star-icon w-[18px] h-[18px] ml-[8px] object-contain select-none">
+                            </div>
+                            <h3 class="title-text lg:text-[58px] xl:text-[72px] font-bold leading-[0.95] tracking-tight text-black transition-colors">Mysl v<br>rovnováze</h3>
+                        </div>
+                        <div class="flex flex-col items-end text-right">
+                            <p class="desc-text text-[#999999] text-[14px] leading-none mb-[19px] transition-colors">Mgr. Jan Svoboda</p>
+                            <p class="time-text text-[38px] font-normal leading-none text-black transition-colors">16:30</p>
+                            <p class="desc-text text-[20px] text-[#999999] leading-none mt-[4px] transition-colors">18:40</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- AKCE 3: Komentovaná prohlídka výstavy -->
+                <a href="#komentovana-prohlidka" data-bg="bg-prohlidka" data-logo-color="#96ff40" class="schedule-item block st-fade-in delay-400 mb-[28px] sm:mb-[36px] lg:mb-[20px] p-[16px] sm:p-[28px] lg:p-[40px] -mx-[16px] sm:-mx-[28px] lg:-mx-[40px] group">
+                    <!-- Mobilní & Tablet zobrazení -->
+                    <div class="lg:hidden flex flex-col">
+                        <div class="flex justify-between items-end gap-4 mb-[8px] sm:mb-[12px]">
+                            <h3 class="title-text text-[28px] sm:text-[42px] font-bold leading-[0.96] tracking-tight text-black transition-colors">Komentovaná<br>prohlídka výstavy</h3>
+                            <p class="desc-text text-[#999999] text-[12px] sm:text-[14px] leading-none flex-shrink-0 transition-colors">Eva Mirková</p>
+                        </div>
+                        <div class="w-full aspect-[16/9] overflow-hidden bg-gray-100 mb-[10px] sm:mb-[14px]">
+                            <img src="images_bg/presentation.webp" alt="Komentovaná prohlídka výstavy" loading="eager" fetchpriority="high" decoding="async" class="w-full h-full object-cover object-center">
+                        </div>
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center pt-1">
+                                <span class="tag-border border-[1.5px] border-black rounded-[20px] px-[10px] sm:px-[12px] py-[2px] text-[11px] sm:text-[13px] font-bold uppercase tracking-wide leading-none transition-colors">FOPA TEAM</span>
+                                <img src="icons/star.svg" alt="" class="star-icon w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] ml-[8px] object-contain select-none">
+                            </div>
+                            <div class="flex flex-col items-end text-right">
+                                <p class="time-text text-[26px] sm:text-[34px] font-normal leading-none text-black transition-colors">16:55</p>
+                                <p class="desc-text text-[13px] sm:text-[16px] text-[#999999] leading-none mt-[3px] transition-colors">17:20</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop zobrazení -->
+                    <div class="hidden lg:flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <div class="flex items-center mb-[11px]">
+                                <span class="tag-border border-[1.5px] border-black rounded-[20px] px-[12px] py-[2px] text-[13px] font-bold uppercase tracking-wide leading-none transition-colors">FOPA TEAM</span>
+                                <img src="icons/star.svg" alt="" class="star-icon w-[18px] h-[18px] ml-[8px] object-contain select-none">
+                            </div>
+                            <h3 class="title-text lg:text-[58px] xl:text-[72px] font-bold leading-[0.95] tracking-tight text-black transition-colors">Komentovaná prohlídka výstavy</h3>
+                        </div>
+                        <div class="flex flex-col items-end text-right">
+                            <p class="desc-text text-[#999999] text-[14px] leading-none mb-[19px] transition-colors">Eva Mirková</p>
+                            <p class="time-text text-[38px] font-normal leading-none text-black transition-colors">16:55</p>
+                            <p class="desc-text text-[20px] text-[#999999] leading-none mt-[4px] transition-colors">17:20</p>
+                        </div>
+                    </div>
+                </a>
+
+                <div class="text-right mt-[36px] sm:mt-[60px] lg:mt-[100px] mb-[80px] sm:mb-[140px] lg:mb-[280px]">
+                    <a href="#" class="action-link st-fade-in delay-500 inline-flex items-center justify-end text-[16px] sm:text-[20px] lg:text-[24px] font-bold uppercase">
+                        <span class="text-wrap">VŠECHNY AKCE</span> 
+                        <span class="plus-icon text-[22px] sm:text-[26px] lg:text-[30px] font-bold ml-1.5 lg:ml-2 leading-none">+</span>
+                    </a>
+                </div>
+            </div>
+        </div> 
+
+        <!-- ---------------------------------------------------------------
+             5.5 Patička (Footer)
+             --------------------------------------------------------------- -->
+        <footer id="footer-kontakt" class="scroll-trigger bg-black text-white w-full px-[16px] sm:px-[28px] lg:pl-[16px] lg:pr-[20px] pt-[20px] pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col">
+            <div class="st-fade-in border-y border-white w-full pt-[16px] lg:pt-[20px] pb-[8px] flex flex-col">
+                <div class="flex justify-between items-start gap-4 mb-10 lg:mb-12">
+                    <div class="flex flex-col gap-5 lg:gap-6">
+                        <div>
+                            <h4 class="text-[11px] sm:text-[13px] lg:text-[14px] font-normal mb-2 lg:mb-3 text-white/90">Hlavní partneři</h4>
+                            <div class="flex items-center flex-wrap gap-4 sm:gap-6">
+                                <img src="images_partners/pardubice.png" alt="Pardubice" loading="lazy" decoding="async" class="h-6 sm:h-7 lg:h-8 object-contain">
+                                <img src="images_partners/centrum_pro_kulturu.png" alt="Centrum pro otevřenou kulturu" loading="lazy" decoding="async" class="h-6 sm:h-7 lg:h-8 object-contain">
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-[11px] sm:text-[13px] lg:text-[14px] font-normal mb-2 lg:mb-3 text-white/90">Partneři</h4>
+                            <div class="flex items-center flex-wrap gap-4 sm:gap-6">
+                                <img src="images_partners/artikon.png" alt="Artikon" loading="lazy" decoding="async" class="h-4 sm:h-5 lg:h-6 object-contain">
+                                <img src="images_partners/sup.png" alt="Sup" loading="lazy" decoding="async" class="h-4 sm:h-5 lg:h-6 object-contain">
+                                <img src="images_partners/molotow.png" alt="Molotow Praha" loading="lazy" decoding="async" class="h-4 sm:h-5 lg:h-6 object-contain">
+                                <img src="images_partners/bakla.png" alt="Bakla Cafe" loading="lazy" decoding="async" class="h-4 sm:h-5 lg:h-6 object-contain">
+                                <img src="images_partners/relax.png" alt="Relax & Despair" loading="lazy" decoding="async" class="h-4 sm:h-5 lg:h-6 object-contain">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col text-right gap-1 flex-shrink-0">
+                        <a href="#" class="text-[11px] sm:text-[13px] lg:text-[14px] font-normal uppercase tracking-[0.03em] leading-[1.636] transition-colors duration-200 hover:text-[#ea2eab]">INSTAGRAM</a>
+                        <a href="#" class="text-[11px] sm:text-[13px] lg:text-[14px] font-normal uppercase tracking-[0.03em] leading-[1.636] transition-colors duration-200 hover:text-[#ea2eab]">FACEBOOK</a>
+                        <a href="#" class="text-[11px] sm:text-[13px] lg:text-[14px] font-normal uppercase tracking-[0.03em] leading-[1.636] transition-colors duration-200 hover:text-[#ea2eab]">TWITTER</a>
+                    </div>
+                </div>
+
+                <div class="mt-2 lg:mt-4">
+                    <a href="#" class="group inline-flex items-center text-[24px] sm:text-[32px] lg:text-[40px] font-normal leading-[0.949] transition-colors duration-200 hover:text-[#ea2eab]">
+                        NAPIŠTE NÁM 
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" stroke-linecap="square" stroke-linejoin="miter" class="w-5 h-5 sm:w-7 sm:h-7 lg:w-8 lg:h-8 ml-2 lg:ml-3 transition-transform duration-300 ease-out group-hover:translate-x-1 group-hover:-translate-y-1">
+                            <path d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </footer>
+
+        <!-- ---------------------------------------------------------------
+             5.6 Plovoucí navigační šipka (Zobrazena výhradně na PC od 1024px)
+             --------------------------------------------------------------- -->
+        <div id="scroll-arrow" class="hidden lg:flex fixed bottom-[20px] right-[20px] w-10 h-10 z-50 items-center justify-center rounded-full border-[2px] border-white text-white mix-blend-difference cursor-pointer transition-transform duration-300 hover:mix-blend-normal hover:border-[#ea2eab] hover:text-[#ea2eab] hover:-translate-y-1 animate-fade-in delay-800">
+            <svg id="scroll-arrow-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-500">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+            </svg>
+        </div>
+
+    </div>
+
+    <!-- ===================================================================
+         6. KNIHOVNY A HLAVNÍ APLIKAČNÍ SKRIPT
+         =================================================================== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+    <script>
+        /* =================================================================
+           MODUL 1: KONFIGURACE, DETEKCE ZAŘÍZENÍ A GLOBÁLNÍ STAV
+           ================================================================= */
+        const HERO_MEDIA_POOL = [
+            { file: 'images_bg/blue_bg.webp',       color: '#ea2eab' },
+            { file: 'images_bg/sketch.webp',        color: '#96ff40' },
+            { file: 'images_bg/animation.mp4',      color: '#000000' },
+            { file: 'images_bg/embroidery_bg.webp', color: '#ffffff' },
+            { file: 'images_bg/exhibition.webp',    color: '#96ff40' }
+        ];
+
+        const SCHEDULE_IMAGE_FILES = [
+            'images_bg/nanashi.webp',
+            'images_bg/listening.webp',
+            'images_bg/presentation.webp'
+        ];
+
+        const isDesktopViewport = () => window.innerWidth >= 1024;
+
+        const arrowContainer = document.getElementById('scroll-arrow');
+        const arrowSvg       = document.getElementById('scroll-arrow-svg');
+        const dynamicLogo    = document.getElementById('dynamic-logo');
+        const leftMedia      = document.getElementById('left-media');
+        const mobileHeroWrap = document.getElementById('mobile-hero-media');
+        const scheduleItems  = Array.from(document.querySelectorAll('.schedule-item'));
+
+        let currentActiveItem       = null;
+        let currentBgId             = 'bg-default';
+        let lockedClickedItem       = null;
+        let isProgrammaticScroll    = false;
+        let programmaticScrollTimer = null;
+        let scrollRafPending        = false;
+        let initialHeroLogoColor    = '#ea2eab';
+        let initialHeroIndex        = 0;
+        const schedulePreloadCache  = [];
+
+        /* =================================================================
+           MODUL 2: PŘEDNAČTENÍ OBSAHU "PRÁVĚ PROBÍHÁ" A ROTACE ÚVODNÍHO VIZUÁLU
+           ================================================================= */
+        function isVideoFile(path) {
+            return /\.(mp4|webm|ogg)$/i.test(path);
+        }
+
+        // Okamžitě přednačte a dekóduje fotky rozvrhu do GPU paměti
+        function preloadScheduleImages() {
+            SCHEDULE_IMAGE_FILES.forEach(src => {
+                const img = new Image();
+                img.fetchPriority = 'high';
+                img.decoding = 'sync';
+                img.src = src;
+                if (img.decode) {
+                    img.decode().catch(() => {});
+                }
+                schedulePreloadCache.push(img);
+            });
+
+            document.querySelectorAll('#left-media .bg-layer').forEach(layer => {
+                if (layer.tagName === 'IMG' && layer.id !== 'bg-default') {
+                    layer.loading = 'eager';
+                    layer.fetchPriority = 'high';
+                    if (layer.decode) {
+                        layer.decode().catch(() => {});
+                    }
+                }
+            });
+        }
+
+        function initHeroMediaOnLoad() {
+            try {
+                const savedIndex = parseInt(localStorage.getItem('gampa_hero_idx'), 10);
+                initialHeroIndex = Number.isNaN(savedIndex) ? 0 : (savedIndex + 1) % HERO_MEDIA_POOL.length;
+                localStorage.setItem('gampa_hero_idx', String(initialHeroIndex));
+            } catch (e) {
+                initialHeroIndex = Math.floor(Math.random() * HERO_MEDIA_POOL.length);
+            }
+
+            const chosenHero = HERO_MEDIA_POOL[initialHeroIndex];
+            initialHeroLogoColor = chosenHero.color;
+
+            // 1. Nastavení výchozího vizuálu pro Desktop (#bg-default)
+            const oldDesktopDefault = document.getElementById('bg-default');
+            if (oldDesktopDefault && leftMedia) {
+                if (isVideoFile(chosenHero.file)) {
+                    const videoEl = document.createElement('video');
+                    videoEl.id = 'bg-default';
+                    videoEl.src = chosenHero.file;
+                    videoEl.autoplay = isDesktopViewport();
+                    videoEl.loop = true;
+                    videoEl.muted = true;
+                    videoEl.playsInline = true;
+                    videoEl.className = oldDesktopDefault.className;
+                    oldDesktopDefault.replaceWith(videoEl);
+                    if (isDesktopViewport()) videoEl.play().catch(() => {});
+                } else {
+                    oldDesktopDefault.src = chosenHero.file;
+                }
+            }
+
+            // 2. Nastavení výchozího vizuálu pro Mobil/Tablet (#mobile-bg-default)
+            const oldMobileDefault = document.getElementById('mobile-bg-default');
+            if (oldMobileDefault && mobileHeroWrap) {
+                if (isVideoFile(chosenHero.file)) {
+                    const mobileVideoEl = document.createElement('video');
+                    mobileVideoEl.id = 'mobile-bg-default';
+                    mobileVideoEl.src = chosenHero.file;
+                    mobileVideoEl.autoplay = !isDesktopViewport();
+                    mobileVideoEl.loop = true;
+                    mobileVideoEl.muted = true;
+                    mobileVideoEl.playsInline = true;
+                    mobileVideoEl.className = oldMobileDefault.className;
+                    oldMobileDefault.replaceWith(mobileVideoEl);
+                    if (!isDesktopViewport()) mobileVideoEl.play().catch(() => {});
+                } else {
+                    oldMobileDefault.src = chosenHero.file;
+                }
+            }
+
+            setLogoColor(initialHeroLogoColor);
+        }
+
+        /* =================================================================
+           MODUL 3: POMOCNÉ FUNKCE PRO BARVENÍ LOGA A PŘEPÍNÁNÍ POZADÍ (PC)
+           ================================================================= */
+        function setLogoColor(hex) {
+            if (!dynamicLogo) return;
+            const normalizedHex = hex.toLowerCase();
+
+            if (normalizedHex === '#ffffff') {
+                dynamicLogo.style.filter = 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(100%) hue-rotate(340deg) brightness(100%) contrast(100%)';
+            } else if (normalizedHex === '#000000') {
+                dynamicLogo.style.filter = 'brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(100%) hue-rotate(340deg) brightness(100%) contrast(100%)';
+            } else if (normalizedHex === '#96ff40') {
+                dynamicLogo.style.filter = 'brightness(0) saturate(100%) invert(77%) sepia(48%) saturate(601%) hue-rotate(399deg) brightness(104%) contrast(104%)';
+            } else {
+                dynamicLogo.style.filter = 'brightness(0) saturate(100%) invert(34%) sepia(48%) saturate(3501%) hue-rotate(297deg) brightness(97%) contrast(95%)';
+            }
+        }
+
+        function getStaticBackgrounds() {
+            return Array.from(document.querySelectorAll('#left-media .bg-layer:not(.dynamic-hover)'));
+        }
+
+        function switchBackground(targetBgId, force = false) {
+            if (!isDesktopViewport()) return;
+            if (!force && targetBgId === currentBgId) return;
+            currentBgId = targetBgId;
+
+            const targetBg = document.getElementById(targetBgId);
+            if (!targetBg) return;
+
+            const isIntroPending = document.documentElement.classList.contains('intro-pending');
+
+            getStaticBackgrounds().forEach(bg => {
+                if (bg === targetBg) {
+                    bg.style.zIndex = '2';
+                    if (bg.tagName === 'VIDEO') bg.play().catch(() => {});
+                    if (window.gsap && !isIntroPending) {
+                        gsap.killTweensOf(bg, 'opacity,scale');
+                        gsap.fromTo(bg,
+                            { opacity: parseFloat(getComputedStyle(bg).opacity) || 0, scale: 1.04 },
+                            { opacity: 1, scale: 1, duration: 0.55, ease: 'power2.out', overwrite: 'auto' }
+                        );
+                    } else {
+                        if (window.gsap) gsap.killTweensOf(bg, 'opacity');
+                        bg.style.opacity = '1';
+                    }
+                } else {
+                    bg.style.zIndex = bg.id === 'bg-default' ? '0' : '1';
+                    // Při obnovení stránky přímo v rozvrhu schováme i bg-default, aby neprosvítal
+                    const keepDefaultUnderneath = bg.id === 'bg-default' && !isIntroPending;
+                    const targetOpacity = keepDefaultUnderneath ? 1 : 0;
+
+                    if (window.gsap && !isIntroPending) {
+                        gsap.killTweensOf(bg, 'opacity');
+                        gsap.to(bg, {
+                            opacity: targetOpacity,
+                            duration: 0.45,
+                            ease: 'power2.out',
+                            overwrite: 'auto'
+                        });
+                    } else {
+                        if (window.gsap) gsap.killTweensOf(bg, 'opacity');
+                        bg.style.opacity = String(targetOpacity);
+                    }
+                }
+            });
+        }
+
+        preloadScheduleImages();
+        initHeroMediaOnLoad();
+
+        /* =================================================================
+           MODUL 4: SEKCE "PRÁVĚ PROBÍHÁ" (AKTIVACE SCROLLOVÁNÍM I KLIKNUTÍM)
+           ================================================================= */
+        function setActiveScheduleItem(item, force = false) {
+            if (!force && item === currentActiveItem) return;
+            currentActiveItem = item;
+
+            scheduleItems.forEach(el => {
+                el.classList.toggle('is-active', el === item);
+            });
+
+            if (window.__navHoverActive || !isDesktopViewport()) return;
+
+            if (item) {
+                const targetBgId = item.getAttribute('data-bg') || 'bg-default';
+                const logoColor  = item.getAttribute('data-logo-color') || '#000000';
+                switchBackground(targetBgId, force);
+                setLogoColor(logoColor);
+            } else {
+                switchBackground('bg-default', force);
+                setLogoColor(initialHeroLogoColor);
+            }
+        }
+
+        function getScheduleItemAtTrigger() {
+            if (scheduleItems.length === 0) return null;
+            const triggerY = window.innerHeight / 2;
+            const halfGap  = isDesktopViewport() ? 10 : 16;
+
+            for (let i = 0; i < scheduleItems.length; i++) {
+                const rect        = scheduleItems[i].getBoundingClientRect();
+                const topBound    = i === 0 ? rect.top : rect.top - halfGap;
+                const bottomBound = i === scheduleItems.length - 1 ? rect.bottom : rect.bottom + halfGap;
+
+                if (triggerY >= topBound && triggerY <= bottomBound) {
+                    return scheduleItems[i];
+                }
+            }
+            return null;
+        }
+
+        function handleScrollUpdate(force = false) {
+            if (isDesktopViewport() && arrowSvg) {
+                const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+                arrowSvg.style.transform = window.scrollY > maxScroll / 2 ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+
+            if (isProgrammaticScroll && lockedClickedItem) {
+                setActiveScheduleItem(lockedClickedItem, force);
+                return;
+            }
+
+            const itemAtTrigger = getScheduleItemAtTrigger();
+
+            if (lockedClickedItem) {
+                const firstRect       = scheduleItems[0].getBoundingClientRect();
+                const lastRect        = scheduleItems[scheduleItems.length - 1].getBoundingClientRect();
+                const triggerY        = window.innerHeight / 2;
+                const isInsideSection = triggerY >= (firstRect.top - 80) && triggerY <= (lastRect.bottom + 80);
+
+                if (!isInsideSection) {
+                    lockedClickedItem = null;
+                } else {
+                    setActiveScheduleItem(lockedClickedItem, force);
+                    return;
+                }
+            }
+
+            setActiveScheduleItem(itemAtTrigger, force);
+        }
+
+        function clearManualLockOnUserInput() {
+            if (!isProgrammaticScroll) {
+                lockedClickedItem = null;
+            }
+        }
+
+        window.addEventListener('wheel', clearManualLockOnUserInput, { passive: true });
+        window.addEventListener('touchmove', clearManualLockOnUserInput, { passive: true });
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Space', 'Home', 'End'].includes(e.key)) {
+                clearManualLockOnUserInput();
+            }
+        });
+
+        scheduleItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                lockedClickedItem    = item;
+                isProgrammaticScroll = true;
+                setActiveScheduleItem(item, true);
+
+                const rect          = item.getBoundingClientRect();
+                const itemCenterY   = rect.top + (rect.height / 2);
+                const targetScrollY = Math.max(0, window.scrollY + itemCenterY - (window.innerHeight / 2));
+
+                window.scrollTo({ top: targetScrollY, behavior: 'smooth' });
+
+                clearTimeout(programmaticScrollTimer);
+                programmaticScrollTimer = setTimeout(() => {
+                    isProgrammaticScroll = false;
+                }, 700);
+            });
+        });
+
+        window.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) {
+                clearTimeout(programmaticScrollTimer);
+                programmaticScrollTimer = setTimeout(() => {
+                    isProgrammaticScroll = false;
+                }, 150);
+            }
+
+            if (!scrollRafPending) {
+                scrollRafPending = true;
+                requestAnimationFrame(() => {
+                    handleScrollUpdate(false);
+                    scrollRafPending = false;
+                });
+            }
+        }, { passive: true });
+
+        // Okamžitá kontrola po inicializaci skriptu + při obnově stavu po F5
+        requestAnimationFrame(() => handleScrollUpdate(true));
+        window.addEventListener('load', () => handleScrollUpdate(true));
+        window.addEventListener('pageshow', () => handleScrollUpdate(true));
+        window.addEventListener('resize', () => handleScrollUpdate(false), { passive: true });
+
+        if (arrowContainer) {
+            arrowContainer.addEventListener('animationend', (e) => {
+                if (e.animationName === 'fadeIn') {
+                    arrowContainer.classList.remove('animate-fade-in', 'delay-800');
+                    arrowContainer.style.opacity = '1';
+                }
+            });
+
+            arrowContainer.addEventListener('click', () => {
+                arrowContainer.classList.remove('animate-arrow-click');
+                void arrowContainer.offsetWidth;
+                arrowContainer.classList.add('animate-arrow-click');
+                setTimeout(() => {
+                    arrowContainer.classList.remove('animate-arrow-click');
+                }, 300);
+
+                lockedClickedItem = null;
+                const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+                if (window.scrollY > maxScroll / 2) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+                }
+            });
+        }
+
+        /* =================================================================
+           MODUL 5: DESKTOPOVÁ NAVIGACE (HOVER SEKVENCE – AKTIVNÍ JEN NA PC)
+           ================================================================= */
+        (function initDesktopNavHover() {
+            if (!leftMedia) return;
+
+            const preloadedMediaCache = [];
+            let isPreloaded = false;
+
+            function preloadDesktopAssets() {
+                if (isPreloaded || !isDesktopViewport()) return;
+                isPreloaded = true;
+
+                HERO_MEDIA_POOL.forEach(item => {
+                    if (isVideoFile(item.file)) {
+                        const v = document.createElement('video');
+                        v.preload = 'auto';
+                        v.muted = true;
+                        v.playsInline = true;
+                        v.src = item.file;
+                        v.load();
+                        preloadedMediaCache.push(v);
+                    } else {
+                        const img = new Image();
+                        img.decoding = 'sync';
+                        img.src = item.file;
+                        if (img.decode) img.decode().catch(() => {});
+                        preloadedMediaCache.push(img);
+                    }
+                });
+            }
+
+            window.addEventListener('load', preloadDesktopAssets);
+            window.addEventListener('resize', preloadDesktopAssets, { passive: true });
+
+            let currentIndex = (initialHeroIndex + 1) % HERO_MEDIA_POOL.length;
+            let hoverZIndex  = 10;
+            let leaveTimeout = null;
+            const logoWrapper = leftMedia.querySelector('.intro-logo');
+
+            function clearAllHoverLayers() {
+                window.__navHoverActive = false;
+                const activeHoverEls = leftMedia.querySelectorAll('.dynamic-hover');
+                activeHoverEls.forEach(el => {
+                    gsap.killTweensOf(el);
+                    gsap.to(el, {
+                        opacity: 0,
+                        scale: 1.05,
+                        duration: 0.45,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            if (el.tagName === 'VIDEO') el.pause();
+                            if (el.parentNode) el.remove();
+                        }
+                    });
+                });
+                hoverZIndex = 10;
+                handleScrollUpdate(true);
+            }
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('mouseenter', () => {
+                    if (!isDesktopViewport()) return;
+                    preloadDesktopAssets();
+
+                    if (leaveTimeout) {
+                        clearTimeout(leaveTimeout);
+                        leaveTimeout = null;
+                    }
+
+                    window.__navHoverActive = true;
+                    const previousHoverEls = Array.from(leftMedia.querySelectorAll('.dynamic-hover'));
+
+                    const itemData = HERO_MEDIA_POOL[currentIndex];
+                    currentIndex   = (currentIndex + 1) % HERO_MEDIA_POOL.length;
+                    hoverZIndex++;
+
+                    setLogoColor(itemData.color);
+
+                    let newDynamicEl;
+                    if (isVideoFile(itemData.file)) {
+                        newDynamicEl = document.createElement('video');
+                        newDynamicEl.src = itemData.file;
+                        newDynamicEl.autoplay = true;
+                        newDynamicEl.loop = true;
+                        newDynamicEl.muted = true;
+                        newDynamicEl.playsInline = true;
+                        newDynamicEl.play().catch(() => {});
+                    } else {
+                        newDynamicEl = document.createElement('img');
+                        newDynamicEl.decoding = 'sync';
+                        newDynamicEl.src = itemData.file;
+                    }
+
+                    newDynamicEl.className = 'bg-layer dynamic-hover absolute inset-0 w-full h-full object-cover object-center';
+                    newDynamicEl.style.zIndex = String(hoverZIndex);
+                    logoWrapper.style.zIndex  = String(hoverZIndex + 5);
+
+                    leftMedia.insertBefore(newDynamicEl, logoWrapper);
+
+                    previousHoverEls.forEach(oldEl => {
+                        gsap.killTweensOf(oldEl, 'opacity');
+                        gsap.set(oldEl, { opacity: 1 });
+                    });
+
+                    gsap.fromTo(newDynamicEl,
+                        { opacity: 1, scale: 1.15, clipPath: 'inset(100% 0% 0% 0%)' },
+                        {
+                            opacity: 1,
+                            scale: 1,
+                            clipPath: 'inset(0% 0% 0% 0%)',
+                            duration: 0.85,
+                            ease: 'expo.out',
+                            overwrite: 'auto',
+                            onComplete: () => {
+                                previousHoverEls.forEach(oldEl => {
+                                    if (oldEl.tagName === 'VIDEO') oldEl.pause();
+                                    if (oldEl.parentNode) oldEl.remove();
+                                });
+                            }
+                        }
+                    );
+                });
+
+                link.addEventListener('mouseleave', () => {
+                    if (!isDesktopViewport()) return;
+                    if (leaveTimeout) clearTimeout(leaveTimeout);
+                    leaveTimeout = setTimeout(() => {
+                        leaveTimeout = null;
+                        clearAllHoverLayers();
+                    }, 80);
+                });
+            });
+        })();
+
+        /* =================================================================
+           MODUL 6: MOBILNÍ A TABLETOVÉ MENU (LEHKÁ 60FPS GPU ANIMACE)
+           ================================================================= */
+        (function initMobileMenu() {
+            const menuOverlay = document.getElementById('mobile-menu-overlay');
+            const openBtn     = document.getElementById('mobile-menu-open');
+            const closeBtn    = document.getElementById('mobile-menu-close');
+
+            if (!menuOverlay || !openBtn || !closeBtn) return;
+
+            const navItems  = menuOverlay.querySelectorAll('.mobile-nav-item');
+            const navNums   = menuOverlay.querySelectorAll('.mobile-nav-num');
+            const bottomEls = menuOverlay.querySelectorAll('.mobile-menu-bottom-el');
+
+            let isMenuOpen = false;
+            let menuTl     = null;
+
+            function openMobileMenu() {
+                if (isMenuOpen) return;
+                isMenuOpen = true;
+                document.body.classList.add('menu-open');
+                menuOverlay.classList.add('is-open');
+                menuOverlay.setAttribute('aria-hidden', 'false');
+
+                if (menuTl) menuTl.kill();
+
+                gsap.set(menuOverlay, { autoAlpha: 0 });
+                gsap.set(navItems,    { yPercent: 105, opacity: 0 });
+                gsap.set(navNums,     { opacity: 0, y: 6 });
+                gsap.set(closeBtn,    { opacity: 0 });
+                gsap.set(bottomEls,   { opacity: 0, y: 10 });
+
+                menuTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+                menuTl
+                    .to(menuOverlay, {
+                        autoAlpha: 1,
+                        duration: 0.28,
+                        ease: 'power2.out'
+                    })
+                    .to(closeBtn, {
+                        opacity: 1,
+                        duration: 0.35
+                    }, '-=0.1')
+                    .to(navItems, {
+                        yPercent: 0,
+                        opacity: 1,
+                        duration: 0.55,
+                        stagger: 0.045,
+                        ease: 'expo.out'
+                    }, '-=0.25')
+                    .to(navNums, {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.4,
+                        stagger: 0.045
+                    }, '-=0.45')
+                    .to(bottomEls, {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.4,
+                        stagger: 0.05
+                    }, '-=0.35');
+            }
+
+            function closeMobileMenu(onDone) {
+                if (!isMenuOpen) return;
+                isMenuOpen = false;
+
+                if (menuTl) menuTl.kill();
+
+                menuTl = gsap.timeline({
+                    onComplete: () => {
+                        menuOverlay.classList.remove('is-open');
+                        menuOverlay.setAttribute('aria-hidden', 'true');
+                        document.body.classList.remove('menu-open');
+                        if (typeof onDone === 'function') onDone();
+                    }
+                });
+
+                menuTl
+                    .to(navItems, {
+                        yPercent: -60,
+                        opacity: 0,
+                        duration: 0.25,
+                        stagger: 0.02,
+                        ease: 'power2.in'
+                    }, 0)
+                    .to(menuOverlay, {
+                        autoAlpha: 0,
+                        duration: 0.25,
+                        ease: 'power2.inOut'
+                    }, 0.08);
+            }
+
+            openBtn.addEventListener('click', openMobileMenu);
+            closeBtn.addEventListener('click', () => closeMobileMenu());
+
+            navItems.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    if (href && href.startsWith('#') && href.length > 1) {
+                        e.preventDefault();
+                        const targetEl = document.querySelector(href);
+                        closeMobileMenu(() => {
+                            if (targetEl) {
+                                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        });
+                    } else {
+                        closeMobileMenu();
+                    }
+                });
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isMenuOpen) closeMobileMenu();
+            });
+            window.addEventListener('resize', () => {
+                if (isDesktopViewport() && isMenuOpen) closeMobileMenu();
+            });
+        })();
+
+        /* =================================================================
+           MODUL 7: TEXTOVÉ REVEAL ANIMACE A INTERSECTION OBSERVER
+           ================================================================= */
+        (function initTextAndScrollAnimations() {
+            document.querySelectorAll('.animate-fade-up-nav').forEach(el => {
+                el.addEventListener('animationend', () => {
+                    el.style.willChange = 'auto';
+                }, { once: true });
+            });
+
+            document.querySelectorAll('.animate-text-reveal').forEach(el => {
+                if (!isDesktopViewport()) {
+                    el.classList.add('st-fade-in', 'delay-200');
+                    return;
+                }
+
+                const htmlContent = el.innerHTML;
+                el.innerHTML = '';
+                let globalWordIndex = 0;
+                
+                const lines = htmlContent.split(/<br\s*\/?>/i);
+                lines.forEach((line, lineIndex) => {
+                    line.trim().split(/\s+/).forEach((word, wordIndex, array) => {
+                        const wordSpan = document.createElement('span');
+                        wordSpan.className = 'word-span';
+                        wordSpan.innerHTML = word;
+                        wordSpan.style.animationDelay = `${150 + (globalWordIndex * 20)}ms`;
+                        wordSpan.addEventListener('animationend', () => {
+                            wordSpan.style.willChange = 'auto';
+                        }, { once: true });
+                        el.appendChild(wordSpan);
+                        globalWordIndex++;
+                        
+                        if (wordIndex < array.length - 1) {
+                            const spaceSpan = document.createElement('span');
+                            spaceSpan.className = 'word-span';
+                            spaceSpan.innerHTML = '&nbsp;';
+                            spaceSpan.style.animationDelay = `${150 + (globalWordIndex * 20)}ms`;
+                            spaceSpan.addEventListener('animationend', () => {
+                                spaceSpan.style.willChange = 'auto';
+                            }, { once: true });
+                            el.appendChild(spaceSpan);
+                            globalWordIndex++;
+                        }
+                    });
+                    
+                    if (lineIndex < lines.length - 1) {
+                        el.appendChild(document.createElement('br'));
+                    }
+                });
+            });
+
+            document.querySelectorAll('.st-fade-in').forEach(el => {
+                el.addEventListener('animationend', () => {
+                    el.style.willChange = 'auto';
+                }, { once: true });
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                handleScrollUpdate(true);
+                requestAnimationFrame(() => handleScrollUpdate(true));
+
+                const observer = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            obs.unobserve(entry.target);
+                        }
+                    });
+                }, { root: null, rootMargin: '0px', threshold: 0.12 });
+
+                document.querySelectorAll('.scroll-trigger').forEach(el => {
+                    observer.observe(el);
+                });
+            });
+        })();
+
+        /* =================================================================
+           MODUL 8: ÚVODNÍ INTRO ANIMACE A ANIMACE FOOTERU
+           ================================================================= */
+        (function initIntroAndFooter() {
+            const root = document.documentElement;
+            const done = () => root.classList.remove('intro-pending');
+
+            if (!window.gsap || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                handleScrollUpdate(true);
+                done();
+                return;
+            }
+
+            // Nejprve vyhodnotíme, jestli je uživatel po F5 odscrollovaný v sekci "Právě probíhá"
+            handleScrollUpdate(true);
+
+            const activeHero = isDesktopViewport()
+                ? (document.getElementById(currentBgId) || document.getElementById('bg-default'))
+                : document.getElementById('mobile-bg-default');
+
+            function playIntro() {
+                // Těsně před odhalením plátna ještě jednou synchronizujeme aktivní položku rozvrhu
+                handleScrollUpdate(true);
+
+                if (isDesktopViewport()) {
+                    const desktopLayers = document.querySelectorAll('#left-media .bg-layer');
+                    gsap.set(desktopLayers, { scale: 1.35 });
+                    gsap.set('.intro-logo', { y: 24 });
+                    done();
+
+                    const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+                    tl.fromTo('#left-media',
+                            { clipPath: 'inset(100% 0% 0% 0%)' },
+                            { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.7, ease: 'expo.inOut' })
+                      .to(desktopLayers, { scale: 1, duration: 2.2 }, '<')
+                      .fromTo('.intro-logo', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.9 }, '-=1.0')
+                      .add(() => {
+                          gsap.set('#left-media', { clearProps: 'clipPath,transform' });
+                          gsap.set('.intro-logo', { clearProps: 'transform,opacity' });
+                          handleScrollUpdate(true);
+                      });
+                } else {
+                    const mobileLayer = document.querySelector('#mobile-hero-media .mobile-bg-layer');
+                    gsap.set('#mobile-header', { y: -10, opacity: 0 });
+                    gsap.set('#mobile-hero-media', { opacity: 0, y: 12 });
+                    if (mobileLayer) gsap.set(mobileLayer, { scale: 1.08 });
+                    done();
+
+                    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+                    tl.to('#mobile-header', { opacity: 1, y: 0, duration: 0.55 })
+                      .to('#mobile-hero-media', { opacity: 1, y: 0, duration: 0.65 }, '-=0.4')
+                      .to(mobileLayer, { scale: 1, duration: 1.1, ease: 'expo.out' }, '<')
+                      .add(() => {
+                          gsap.set(['#mobile-header', '#mobile-hero-media', mobileLayer], { clearProps: 'transform,opacity' });
+                          handleScrollUpdate(true);
+                      });
+                }
+            }
+
+            let introStarted = false;
+            const startIntro = () => {
+                if (introStarted) return;
+                introStarted = true;
+                requestAnimationFrame(playIntro);
+            };
+
+            const fontPromise = (document.fonts && document.fonts.ready)
+                ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 500))])
+                : Promise.resolve();
+
+            const isHeroReady = !activeHero || (activeHero.tagName === 'VIDEO' ? activeHero.readyState >= 2 : activeHero.complete);
+            const heroPromise = isHeroReady
+                ? Promise.resolve()
+                : new Promise(r => {
+                    const readyEvent = activeHero.tagName === 'VIDEO' ? 'loadeddata' : 'load';
+                    activeHero.addEventListener(readyEvent, r, { once: true });
+                    activeHero.addEventListener('error', r, { once: true });
+                    setTimeout(r, 800);
+                });
+
+            Promise.all([fontPromise, heroPromise]).then(startIntro);
+
+            const footer = document.querySelector('footer');
+            if (footer) {
+                const footerItems = footer.querySelectorAll('h4, img, a');
+                gsap.set(footerItems, { autoAlpha: 0, y: 8 });
+
+                const footerObs = new IntersectionObserver((entries) => {
+                    if (!entries[0].isIntersecting) return;
+                    footerObs.disconnect();
+
+                    gsap.to(footerItems, {
+                        autoAlpha: 1,
+                        y: 0,
+                        duration: 0.6,
+                        ease: 'power2.out',
+                        stagger: isDesktopViewport() ? 0.04 : 0.02,
+                        delay: 0.05,
+                        onComplete: () => {
+                            gsap.set(footerItems, { clearProps: 'opacity,visibility,transform' });
+                        }
+                    });
+                }, { threshold: 0.12 });
+
+                footerObs.observe(footer);
+            }
+        })();
+    </script>
+</body>
+</html>
